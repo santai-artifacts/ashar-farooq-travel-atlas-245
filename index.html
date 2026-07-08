@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Travel Atlas — Track Your Journeys</title>
+
+<!-- Leaflet map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg: #0f1720;
+    --bg-soft: #16212e;
+    --panel: #1b2836;
+    --panel-2: #22303f;
+    --line: #2c3d4f;
+    --text: #eaf1f7;
+    --muted: #8ea3b8;
+    --accent: #ff7a59;
+    --accent-2: #4dd4c4;
+    --gold: #ffcb6b;
+    --shadow: 0 10px 30px -12px rgba(0,0,0,.6);
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: radial-gradient(1200px 700px at 80% -10%, #1d2f42 0%, var(--bg) 55%);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; margin: 0; letter-spacing: -.01em; }
+
+  .app {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    background: linear-gradient(180deg, var(--bg-soft), var(--bg));
+    border-right: 1px solid var(--line);
+    padding: 26px 24px 40px;
+    overflow-y: auto;
+    max-height: 100vh;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .brand .mark {
+    width: 40px; height: 40px; border-radius: 12px; flex: none;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    display: grid; place-items: center; font-size: 20px;
+    box-shadow: var(--shadow);
+  }
+  .brand h1 { font-size: 22px; }
+  .brand p { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+  .stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    margin: 22px 0 24px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .stat .n { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 700; line-height: 1; }
+  .stat .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 6px; }
+  .stat.a .n { color: var(--accent); }
+  .stat.b .n { color: var(--accent-2); }
+  .stat.c .n { color: var(--gold); }
+
+  .section-title {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--muted); margin: 0 0 12px; font-weight: 600;
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* ---------- Form ---------- */
+  form.card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+  input, textarea, select {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; font-size: 14px; font-family: inherit;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(255,122,89,.15);
+  }
+  textarea { resize: vertical; min-height: 56px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .rating-input { display: flex; gap: 6px; }
+  .rating-input button {
+    background: var(--bg); border: 1px solid var(--line); color: var(--muted);
+    width: 34px; height: 34px; border-radius: 9px; cursor: pointer;
+    font-size: 15px; transition: all .12s;
+  }
+  .rating-input button.on { color: var(--gold); border-color: var(--gold); background: rgba(255,203,107,.1); }
+  .rating-input button:hover { transform: translateY(-1px); }
+
+  .btn {
+    width: 100%; border: none; cursor: pointer;
+    background: linear-gradient(135deg, var(--accent), #ff9c73);
+    color: #1a1008; font-weight: 700; font-size: 14.5px;
+    padding: 12px; border-radius: 11px; margin-top: 4px;
+    transition: transform .12s, box-shadow .12s;
+    box-shadow: 0 8px 20px -8px rgba(255,122,89,.6);
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -8px rgba(255,122,89,.75); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: .6; cursor: wait; }
+
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 8px; text-align: center; }
+
+  /* ---------- Main ---------- */
+  .main { display: flex; flex-direction: column; max-height: 100vh; }
+  #map { flex: 1; min-height: 320px; background: var(--bg-soft); z-index: 1; }
+
+  .list-wrap {
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    max-height: 42vh; overflow-y: auto; padding: 20px 24px 28px;
+  }
+  .list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 12px; }
+  .list-head h2 { font-size: 18px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    font-size: 12px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+    transition: all .12s; white-space: nowrap;
+  }
+  .chip.on { background: var(--accent); color: #1a1008; border-color: var(--accent); font-weight: 600; }
+
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px;
+  }
+  .trip {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; overflow: hidden; cursor: pointer;
+    transition: transform .14s, border-color .14s, box-shadow .14s;
+    display: flex; flex-direction: column;
+  }
+  .trip:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: var(--shadow); }
+  .trip .thumb {
+    height: 118px; background-size: cover; background-position: center;
+    background-color: var(--panel-2); position: relative;
+  }
+  .trip .thumb .flag { position: absolute; top: 8px; left: 8px; font-size: 20px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+  .trip .thumb .rate {
+    position: absolute; bottom: 8px; right: 8px; font-size: 11px;
+    background: rgba(15,23,32,.82); padding: 3px 8px; border-radius: 999px; color: var(--gold);
+  }
+  .trip .body { padding: 12px 14px; }
+  .trip .body h3 { font-size: 16px; line-height: 1.2; }
+  .trip .body .place { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .trip .body .date { font-size: 11.5px; color: var(--accent-2); margin-top: 8px; font-weight: 500; }
+  .trip .body .note { font-size: 12.5px; color: var(--muted); margin-top: 8px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; }
+  .empty .big { font-size: 40px; margin-bottom: 10px; }
+  .empty h3 { color: var(--text); margin-bottom: 6px; font-size: 18px; }
+
+  /* ---------- Modal ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(8,12,17,.72);
+    display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px;
+    backdrop-filter: blur(4px);
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+    max-width: 480px; width: 100%; overflow: hidden; box-shadow: var(--shadow);
+    animation: pop .2s ease;
+  }
+  @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal .hero { height: 190px; background-size: cover; background-position: center; background-color: var(--panel-2); }
+  .modal .content { padding: 22px 24px 24px; }
+  .modal h2 { font-size: 24px; }
+  .modal .sub { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+  .modal .meta { display: flex; gap: 18px; margin: 18px 0; flex-wrap: wrap; }
+  .modal .meta div { font-size: 13px; }
+  .modal .meta .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+  .modal p.notes { font-size: 14px; line-height: 1.6; color: #cdd9e6; margin: 0 0 20px; white-space: pre-wrap; }
+  .modal .actions { display: flex; gap: 10px; }
+  .modal .actions button { flex: 1; padding: 11px; border-radius: 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--text); transition: all .12s; }
+  .modal .actions .del { color: #ff6b6b; border-color: rgba(255,107,107,.4); }
+  .modal .actions .del:hover { background: rgba(255,107,107,.12); }
+  .modal .actions .close:hover { border-color: var(--accent); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    padding: 12px 20px; border-radius: 12px; font-size: 13.5px; box-shadow: var(--shadow);
+    transition: transform .3s ease; z-index: 3000; opacity: 0;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* Leaflet dark tweaks */
+  .leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); border-radius: 12px; }
+  .leaflet-popup-tip { background: var(--panel); }
+  .leaflet-popup-content { margin: 12px 14px; font-family: 'Inter', sans-serif; }
+  .leaflet-popup-content b { font-family: 'Fraunces', serif; font-size: 15px; }
+  .leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { max-height: none; border-right: none; border-bottom: 1px solid var(--line); }
+    .main { max-height: none; }
+    #map { height: 340px; flex: none; }
+    .list-wrap { max-height: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">🧭</div>
+      <div>
+        <h1>Travel Atlas</h1>
+        <p>Every place you've wandered</p>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat a"><div class="n" id="statTrips">0</div><div class="l">Trips</div></div>
+      <div class="stat b"><div class="n" id="statCountries">0</div><div class="l">Countries</div></div>
+      <div class="stat c"><div class="n" id="statDays">0</div><div class="l">Days away</div></div>
+    </div>
+
+    <div class="section-title">Log a trip</div>
+    <form class="card" id="tripForm" autocomplete="off">
+      <div class="field">
+        <label for="place">Destination</label>
+        <input id="place" placeholder="e.g. Kyoto, Japan" required />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="start">Arrived</label>
+          <input id="start" type="date" required />
+        </div>
+        <div class="field">
+          <label for="end">Left</label>
+          <input id="end" type="date" />
+        </div>
+      </div>
+      <div class="field">
+        <label>How was it?</label>
+        <div class="rating-input" id="rating">
+          <button type="button" data-v="1">★</button>
+          <button type="button" data-v="2">★</button>
+          <button type="button" data-v="3">★</button>
+          <button type="button" data-v="4">★</button>
+          <button type="button" data-v="5">★</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="photo">Photo URL <span style="opacity:.6">(optional)</span></label>
+        <input id="photo" placeholder="https://…" />
+      </div>
+      <div class="field">
+        <label for="note">Notes <span style="opacity:.6">(optional)</span></label>
+        <textarea id="note" placeholder="Best ramen of my life, temple at dawn…"></textarea>
+      </div>
+      <button class="btn" type="submit" id="submitBtn">Add to map</button>
+      <div class="hint" id="hint">We'll find it on the map automatically 🌍</div>
+    </form>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div id="map"></div>
+    <div class="list-wrap">
+      <div class="list-head">
+        <h2>Your journeys</h2>
+        <div class="filters" id="filters"></div>
+      </div>
+      <div id="tripList"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Detail modal -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   Travel Atlas — client-side travel tracker
+   Data persists in localStorage (falls back to memory if blocked).
+   Geocoding via OpenStreetMap Nominatim (free, no key).
+   ============================================================ */
+
+// ---- Storage (guarded) ----
+const KEY = 'travel-atlas-v1';
+let memoryStore = null; // fallback if localStorage unavailable
+function loadTrips() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    return raw ? JSON.parse(raw) : seed();
+  } catch (e) {
+    return memoryStore || seed();
+  }
+}
+function saveTrips() {
+  try { localStorage.setItem(KEY, JSON.stringify(trips)); }
+  catch (e) { memoryStore = trips; }
+}
+
+// ---- Sample data so the map isn't empty on first run ----
+function seed() {
+  return [
+    { id: uid(), place: 'Kyoto, Japan', country: 'Japan', flag: '🇯🇵',
+      lat: 35.0116, lng: 135.7681, start: '2024-04-02', end: '2024-04-09', rating: 5,
+      photo: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&q=80',
+      note: 'Cherry blossoms in full bloom. Wandered the Fushimi Inari gates before sunrise — completely empty and magical.' },
+    { id: uid(), place: 'Lisbon, Portugal', country: 'Portugal', flag: '🇵🇹',
+      lat: 38.7223, lng: -9.1393, start: '2023-09-14', end: '2023-09-20', rating: 4,
+      photo: 'https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=800&q=80',
+      note: 'Tram 28, pastéis de nata, and endless miradouros. The light here is unreal at golden hour.' },
+    { id: uid(), place: 'Patagonia, Chile', country: 'Chile', flag: '🇨🇱',
+      lat: -50.9423, lng: -73.4068, start: '2023-01-05', end: '2023-01-14', rating: 5,
+      photo: 'https://images.unsplash.com/photo-1531794343519-f70c81b3a01f?w=800&q=80',
+      note: 'The W trek in Torres del Paine. Brutal wind, unbelievable peaks. Slept under a sky with no light pollution.' },
+  ];
+}
+
+// ---- State ----
+let trips = loadTrips();
+let selectedRating = 0;
+let activeFilter = 'all';
+let map, markerLayer;
+
+// ---- Helpers ----
+function uid() { return 'id-' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36); }
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+function fmtDate(s) {
+  if (!s) return '';
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function dateRange(t) {
+  if (t.end && t.end !== t.start) return fmtDate(t.start) + ' → ' + fmtDate(t.end);
+  return fmtDate(t.start);
+}
+function daysOf(t) {
+  if (!t.end) return 1;
+  const a = new Date(t.start), b = new Date(t.end);
+  return Math.max(1, Math.round((b - a) / 86400000) + 1);
+}
+function esc(s) { return (s || '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+// Rough emoji flag from country name (best-effort; falls back to 📍)
+const FLAGS = { Japan:'🇯🇵', Portugal:'🇵🇹', Chile:'🇨🇱', France:'🇫🇷', Italy:'🇮🇹', Spain:'🇪🇸',
+  'United States':'🇺🇸', USA:'🇺🇸', Germany:'🇩🇪', 'United Kingdom':'🇬🇧', UK:'🇬🇧', Mexico:'🇲🇽',
+  Thailand:'🇹🇭', India:'🇮🇳', Brazil:'🇧🇷', Canada:'🇨🇦', Australia:'🇦🇺', Greece:'🇬🇷',
+  Iceland:'🇮🇸', Morocco:'🇲🇦', Peru:'🇵🇪', Vietnam:'🇻🇳', Indonesia:'🇮🇩', Netherlands:'🇳🇱',
+  Norway:'🇳🇴', Egypt:'🇪🇬', Turkey:'🇹🇷', 'South Korea':'🇰🇷', China:'🇨🇳', Switzerland:'🇨🇭' };
+function flagFor(country) { return FLAGS[country] || '📍'; }
+function placeholderImg(t) {
+  // Deterministic soft gradient when no photo provided
+  const hues = [12, 168, 42, 200, 320];
+  const h = hues[(t.place.charCodeAt(0) + t.place.length) % hues.length];
+  return `linear-gradient(135deg, hsl(${h} 45% 30%), hsl(${(h+40)%360} 40% 22%))`;
+}
+
+// ---- Map ----
+function initMap() {
+  map = L.map('map', { worldCopyJump: true, minZoom: 2 }).setView([20, 10], 2);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+  }).addTo(map);
+  markerLayer = L.layerGroup().addTo(map);
+  renderMarkers();
+}
+function renderMarkers() {
+  if (!markerLayer) return;
+  markerLayer.clearLayers();
+  const pts = [];
+  visibleTrips().forEach(t => {
+    if (typeof t.lat !== 'number') return;
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="font-size:26px;line-height:1;transform:translate(-50%,-100%);filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));cursor:pointer">${t.flag || '📍'}</div>`,
+      iconSize: [0, 0]
+    });
+    const m = L.marker([t.lat, t.lng], { icon })
+      .bindPopup(`<b>${esc(t.place)}</b><br><span style="color:#8ea3b8;font-size:12px">${dateRange(t)} · ${'★'.repeat(t.rating||0)}</span>`)
+      .on('click', () => openDetail(t.id));
+    markerLayer.addLayer(m);
+    pts.push([t.lat, t.lng]);
+  });
+  if (pts.length) {
+    try { map.fitBounds(pts, { padding: [50, 50], maxZoom: 6 }); } catch (e) {}
+  }
+}
+
+// ---- Rendering: stats, filters, list ----
+function render() {
+  saveTrips();
+  renderStats();
+  renderFilters();
+  renderList();
+  renderMarkers();
+}
+function renderStats() {
+  document.getElementById('statTrips').textContent = trips.length;
+  document.getElementById('statCountries').textContent = new Set(trips.map(t => t.country).filter(Boolean)).size;
+  document.getElementById('statDays').textContent = trips.reduce((s, t) => s + daysOf(t), 0);
+}
+function renderFilters() {
+  const countries = [...new Set(trips.map(t => t.country).filter(Boolean))].sort();
+  const el = document.getElementById('filters');
+  el.innerHTML = '';
+  const mk = (val, label) => {
+    const c = document.createElement('div');
+    c.className = 'chip' + (activeFilter === val ? ' on' : '');
+    c.textContent = label;
+    c.onclick = () => { activeFilter = val; render(); };
+    el.appendChild(c);
+  };
+  mk('all', 'All');
+  countries.forEach(c => mk(c, `${flagFor(c)} ${c}`));
+}
+function visibleTrips() {
+  const list = activeFilter === 'all' ? trips : trips.filter(t => t.country === activeFilter);
+  return [...list].sort((a, b) => (b.start || '').localeCompare(a.start || ''));
+}
+function renderList() {
+  const wrap = document.getElementById('tripList');
+  const list = visibleTrips();
+  if (!list.length) {
+    wrap.innerHTML = `<div class="empty"><div class="big">🗺️</div><h3>No trips yet</h3><p>Log your first destination on the left and watch it drop onto the map.</p></div>`;
+    return;
+  }
+  wrap.className = 'grid';
+  wrap.innerHTML = list.map(t => {
+    const thumb = t.photo
+      ? `background-image:url('${esc(t.photo)}')`
+      : `background-image:${placeholderImg(t)}`;
+    return `<div class="trip" data-id="${t.id}">
+      <div class="thumb" style="${thumb}">
+        <span class="flag">${t.flag || '📍'}</span>
+        ${t.rating ? `<span class="rate">${'★'.repeat(t.rating)}</span>` : ''}
+      </div>
+      <div class="body">
+        <h3>${esc(t.place.split(',')[0])}</h3>
+        <div class="place">${esc(t.country || t.place)}</div>
+        <div class="date">${dateRange(t)}</div>
+        ${t.note ? `<div class="note">${esc(t.note)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('.trip').forEach(el =>
+    el.onclick = () => openDetail(el.dataset.id));
+}
+
+// ---- Detail modal ----
+function openDetail(id) {
+  const t = trips.find(x => x.id === id);
+  if (!t) return;
+  const hero = t.photo ? `background-image:url('${esc(t.photo)}')` : `background-image:${placeholderImg(t)}`;
+  document.getElementById('modal').innerHTML = `
+    <div class="hero" style="${hero}"></div>
+    <div class="content">
+      <h2>${t.flag || '📍'} ${esc(t.place.split(',')[0])}</h2>
+      <div class="sub">${esc(t.place)}</div>
+      <div class="meta">
+        <div><div class="k">When</div>${dateRange(t)}</div>
+        <div><div class="k">Duration</div>${daysOf(t)} day${daysOf(t)>1?'s':''}</div>
+        <div><div class="k">Rating</div><span style="color:var(--gold)">${'★'.repeat(t.rating||0)}${'☆'.repeat(5-(t.rating||0))}</span></div>
+      </div>
+      ${t.note ? `<p class="notes">${esc(t.note)}</p>` : '<p class="notes" style="opacity:.5">No notes for this trip.</p>'}
+      <div class="actions">
+        <button class="close">Close</button>
+        <button class="del" data-id="${t.id}">Delete trip</button>
+      </div>
+    </div>`;
+  const ov = document.getElementById('overlay');
+  ov.classList.add('show');
+  document.querySelector('.modal .close').onclick = closeModal;
+  document.querySelector('.modal .del').onclick = () => {
+    trips = trips.filter(x => x.id !== id);
+    closeModal(); render(); toast('Trip removed');
+  };
+  if (typeof t.lat === 'number') { map.setView([t.lat, t.lng], 6, { animate: true }); }
+}
+function closeModal() { document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').onclick = e => { if (e.target.id === 'overlay') closeModal(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ---- Rating widget ----
+const ratingEl = document.getElementById('rating');
+ratingEl.querySelectorAll('button').forEach(b => {
+  b.onclick = () => {
+    selectedRating = +b.dataset.v;
+    ratingEl.querySelectorAll('button').forEach(x => x.classList.toggle('on', +x.dataset.v <= selectedRating));
+  };
+});
+
+// ---- Geocoding (Nominatim) ----
+async function geocode(query) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=${encodeURIComponent(query)}`;
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('geocode failed');
+  const data = await res.json();
+  if (!data.length) return null;
+  const hit = data[0];
+  return {
+    lat: parseFloat(hit.lat),
+    lng: parseFloat(hit.lon),
+    country: hit.address && hit.address.country ? hit.address.country : ''
+  };
+}
+
+// ---- Form submit ----
+document.getElementById('tripForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  const place = document.getElementById('place').value.trim();
+  const start = document.getElementById('start').value;
+  if (!place || !start) return;
+
+  btn.disabled = true; btn.textContent = 'Finding on map…';
+  let geo = null;
+  try { geo = await geocode(place); }
+  catch (err) { /* offline / rate-limited — still save, just unplaced */ }
+
+  const country = geo && geo.country ? geo.country : (place.split(',').pop() || '').trim();
+  const trip = {
+    id: uid(), place,
+    country,
+    flag: flagFor(country),
+    lat: geo ? geo.lat : undefined,
+    lng: geo ? geo.lng : undefined,
+    start,
+    end: document.getElementById('end').value || '',
+    rating: selectedRating,
+    photo: document.getElementById('photo').value.trim(),
+    note: document.getElementById('note').value.trim()
+  };
+  trips.push(trip);
+  render();
+
+  // reset
+  e.target.reset();
+  selectedRating = 0;
+  ratingEl.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+  btn.disabled = false; btn.textContent = 'Add to map';
+  toast(geo ? `${trip.flag} ${place.split(',')[0]} added!` : `${place.split(',')[0]} saved (couldn't locate on map)`);
+};
+
+// ---- Boot ----
+initMap();
+render();
+</script>
+</body>
+</html>
