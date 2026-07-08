@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Travel Atlas — Track Your Journeys</title>
+
+<!-- Leaflet map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ================= Auth screen ================= -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="brand">
+      <div class="mark">🧭</div>
+      <div>
+        <h1 style="font-size:20px">Travel Atlas</h1>
+        <p>Every place you've wandered</p>
+      </div>
+    </div>
+    <h2 id="authTitle">Welcome back</h2>
+    <p class="lede" id="authLede">Sign in to open your personal atlas.</p>
+
+    <div class="auth-error" id="authError"></div>
+
+    <form id="authForm" autocomplete="on">
+      <div class="field">
+        <label for="authEmail">Email</label>
+        <input id="authEmail" type="email" placeholder="you@example.com" required />
+      </div>
+      <div class="field">
+        <label for="authPassword">Password</label>
+        <input id="authPassword" type="password" placeholder="••••••••" required minlength="6" />
+      </div>
+      <button class="btn" type="submit" id="authSubmit">Sign in</button>
+    </form>
+
+    <div class="auth-toggle" id="authToggleWrap">
+      <span id="authToggleText">New here?</span>
+      <button type="button" id="authToggle">Create an account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= App ================= -->
+<div class="app hidden" id="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">🧭</div>
+      <div>
+        <h1>Travel Atlas</h1>
+        <p>Every place you've wandered</p>
+      </div>
+    </div>
+
+    <div class="account">
+      <div class="who">
+        <div class="avatar" id="avatar">?</div>
+        <div class="email" id="userEmail">—</div>
+      </div>
+      <button class="logout" id="logoutBtn">Log out</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat a"><div class="n" id="statTrips">0</div><div class="l">Trips</div></div>
+      <div class="stat b"><div class="n" id="statCountries">0</div><div class="l">Countries</div></div>
+      <div class="stat c"><div class="n" id="statDays">0</div><div class="l">Days away</div></div>
+    </div>
+
+    <div class="section-title">Log a trip</div>
+    <form class="card" id="tripForm" autocomplete="off">
+      <div class="field">
+        <label for="place">Destination</label>
+        <input id="place" placeholder="e.g. Kyoto, Japan" required />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="start">Arrived</label>
+          <input id="start" type="date" required />
+        </div>
+        <div class="field">
+          <label for="end">Left</label>
+          <input id="end" type="date" />
+        </div>
+      </div>
+      <div class="field">
+        <label>How was it?</label>
+        <div class="rating-input" id="rating">
+          <button type="button" data-v="1">★</button>
+          <button type="button" data-v="2">★</button>
+          <button type="button" data-v="3">★</button>
+          <button type="button" data-v="4">★</button>
+          <button type="button" data-v="5">★</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="photo">Photo URL <span style="opacity:.6">(optional)</span></label>
+        <input id="photo" placeholder="https://…" />
+      </div>
+      <div class="field">
+        <label for="note">Notes <span style="opacity:.6">(optional)</span></label>
+        <textarea id="note" placeholder="Best ramen of my life, temple at dawn…"></textarea>
+      </div>
+      <button class="btn" type="submit" id="submitBtn">Add to map</button>
+      <div class="hint" id="hint">We'll find it on the map automatically 🌍</div>
+    </form>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div id="map"></div>
+    <div class="list-wrap">
+      <div class="list-head">
+        <h2>Your journeys</h2>
+        <div class="filters" id="filters"></div>
+      </div>
+      <div id="tripList"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Detail modal -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

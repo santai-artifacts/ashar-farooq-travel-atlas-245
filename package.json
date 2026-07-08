@@ -1,0 +1,17 @@
+{
+  "name": "travel-atlas",
+  "version": "1.0.0",
+  "description": "Full-stack travel tracker — Node + Express + node:sqlite with user accounts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
